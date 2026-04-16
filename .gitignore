@@ -1,0 +1,17 @@
+# Môi trường Node
+node_modules/
+npm-debug.log
+
+# Biến môi trường (Chứa Private Key, API Key)
+.env
+.env.local
+
+# Build của Next.js (Frontend)
+.next/
+out/
+build/
+
+# Build của Hardhat (Blockchain)
+artifacts/
+cache/
+coverage/

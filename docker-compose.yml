@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  # Dịch vụ 1: Giao diện web
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules # Ngăn Docker ghi đè node_modules của máy host
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+
+  # Dịch vụ 2: Mạng lưới Blockchain giả lập (Hardhat Node)
+  blockchain-node:
+    image: node:18-alpine
+    working_dir: /app
+    volumes:
+      - ./blockchain:/app
+    ports:
+      - "8545:8545" # Port mặc định của mạng lưới Hardhat
+    # Tự động cài thư viện và bật mạng lưới nội bộ
+    command: sh -c "npm install && npx hardhat node"

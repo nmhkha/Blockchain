@@ -33,12 +33,18 @@ export default function AdminPage() {
   const [status, setStatus] = useState(null); 
   const [txHash, setTxHash] = useState("");
   const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(false);
 
-  const addLog = (msg) =>
-    setLogs((prev) => [
-      { msg, time: new Date().toLocaleTimeString() },
-      ...prev,
-    ]);
+  const addLog = (msg, type = "loading") =>
+  setLogs((prev) => [
+    {
+      id: Date.now(),
+      msg,
+      time: new Date().toLocaleTimeString(),
+      type, 
+    },
+    ...prev,
+  ]);
 
   const handleChange = (e) =>
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -56,6 +62,7 @@ export default function AdminPage() {
     try {
       setStatus("loading");
       setTxHash("");
+      setLoading(true);
 
       
       addLog("Đang tải tệp lên IPFS...");
@@ -73,12 +80,34 @@ export default function AdminPage() {
         ? await mintCertificateOnChain(certHash, ipfsHash)
         : { hash: "0xMockTx" + Math.random().toString(16).slice(2, 12) };
 
-      setTxHash(tx.hash || tx);
-      addLog(`Thành công! TX: ${(tx.hash || tx).slice(0, 20)}...`);
-      setStatus("success");
+      const finalHash = "0xFAKE_TX_123456";
+
+setTxHash(finalHash);
+
+const key = finalHash.trim();
+
+const storage = JSON.parse(localStorage.getItem("certs") || "{}");
+
+storage[key] = {
+  studentId: form.studentId,
+  fullName: form.fullName,
+  degree: form.degree,
+  major: form.major,
+  graduationYear: form.graduationYear,
+  gpa: form.gpa,
+  ipfsHash,
+  txHash: key,
+  mintedAt: new Date().toISOString(),
+};
+localStorage.setItem("certs", JSON.stringify(storage));
+
+
+addLog(`Thành công! TX: ${finalHash.slice(0, 20)}...`);
+setStatus("success");
     } catch (err) {
       setStatus("error");
       addLog("Lỗi: " + (err.message || "Không xác định"));
+      setLoading(false);
     }
   };
 
@@ -87,6 +116,7 @@ export default function AdminPage() {
     setFile(null);
     setStatus(null);
     setTxHash("");
+    setLoading(false);
   };
 
   return (
@@ -162,23 +192,36 @@ export default function AdminPage() {
                 cursor: status === "loading" ? "not-allowed" : "pointer",
               }}
               onClick={handleSubmit}
-              disabled={status === "loading"}
+              disabled={loading}
             >
-              {status === "loading" ? "Đang xử lý..." : "Mint lên Blockchain"}
+              {loading ? "⏳ Đang xử lý..." : "Mint lên Blockchain"}
             </button>
           </div>
 
           {/* Status Banner */}
           {status === "success" && (
-            <div style={{ ...styles.banner, ...styles.bannerSuccess }}>
-              <strong>Cấp chứng chỉ thành công!</strong>
-              {txHash && (
-                <div style={{ marginTop: 4, fontSize: 12 }}>
-                  TX Hash: <code style={styles.code}>{txHash}</code>
-                </div>
-              )}
-            </div>
-          )}
+  <div style={{ ...styles.banner, ...styles.bannerSuccess }}>
+    <strong>🎉 Cấp chứng chỉ thành công!</strong>
+    {txHash && (
+  <div style={styles.txBox}>
+    <span style={styles.txLabel}>TX Hash</span>
+
+    <div style={styles.txRow}>
+      <div style={styles.txValue}>
+        {txHash}
+      </div>
+
+      <button
+        style={styles.copyBtn}
+        onClick={() => navigator.clipboard.writeText(txHash)}
+      >
+        Copy
+      </button>
+    </div>
+  </div>
+)}
+  </div>
+)}
           {status === "error" && (
             <div style={{ ...styles.banner, ...styles.bannerError }}>
               Có lỗi xảy ra. Kiểm tra log bên dưới.
@@ -193,13 +236,25 @@ export default function AdminPage() {
             <p style={styles.emptyLog}>Chưa có hoạt động nào.</p>
           ) : (
             <ul style={styles.logList}>
-              {logs.map((l, i) => (
-                <li key={i} style={styles.logItem}>
-                  <span style={styles.logTime}>{l.time}</span>
-                  <span>{l.msg}</span>
-                </li>
-              ))}
-            </ul>
+  {logs.map((log) => (
+  <li
+    key={log.id}
+    className={`log-item ${
+      log.type === "success"
+        ? "log-success"
+        : log.type === "error"
+        ? "log-error"
+        : "log-loading"
+    }`}
+    style={{
+      animation: "fadeIn 0.4s ease",
+    }}
+    >
+      <span style={styles.logTime}>{log.time}</span>
+      <span>{log.msg}</span>
+    </li>
+  ))}
+</ul>
           )}
         </div>
       </div>
@@ -215,6 +270,43 @@ const styles = {
     padding: "24px 16px",
     color: "#1a1a1a",
   },
+  txBox: {
+  marginTop: 10,
+},
+
+txLabel: {
+  fontSize: 13,
+  fontWeight: 600,
+  color: "#166534",
+},
+
+txRow: {
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  marginTop: 6,
+},
+
+txValue: {
+  padding: "8px 12px",
+  borderRadius: 8,
+  background: "#111827",
+  color: "#22c55e",
+  fontFamily: "monospace",
+  fontSize: 13,
+  wordBreak: "break-all",
+  flex: 1,
+},
+
+copyBtn: {
+  padding: "6px 10px",
+  borderRadius: 6,
+  border: "none",
+  background: "#3b82f6",
+  color: "#fff",
+  cursor: "pointer",
+},
+
   header: {
     display: "flex",
     alignItems: "center",

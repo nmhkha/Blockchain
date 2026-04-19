@@ -29,21 +29,60 @@ export default function IndexPage() {
   const [inputHash, setInputHash] = useState("");
   const [result, setResult] = useState(null); 
   const [loading, setLoading] = useState(false);
+  const [student, setStudent] = useState(null);
 
-  const handleVerify = async () => {
-    if (!inputHash.trim()) return;
-    setLoading(true);
-    setResult(null);
-    try {
-      const verifyFn = verifyCertificateOnChain || mockVerify;
-      const data = await verifyFn(inputHash.trim());
-      setResult(data);
-    } catch (err) {
-      setResult({ error: err.message || "Không thể xác minh." });
-    } finally {
-      setLoading(false);
+const handleVerify = async () => {
+  if (!inputHash.trim()) return;
+
+  setLoading(true);
+  setResult(null);
+  setStudent(null);
+
+  try {
+    const storage = JSON.parse(localStorage.getItem("certs") || "{}");
+
+    const key = inputHash.trim();
+
+    console.log("🔍 KEY:", key);
+    console.log("📦 STORAGE:", storage);
+
+    const data = storage[key];
+
+    if (data) {
+      console.log("✅ FOUND:", data);
+
+      setStudent(data);
+
+      setResult({
+        valid: true,
+        ...data,
+      });
+
+    } else {
+      console.log("❌ NOT FOUND");
+
+      setStudent(null);
+
+      setResult({
+        valid: false,
+        error: "Không tìm thấy chứng chỉ",
+      });
     }
-  };
+
+  } catch (err) {
+    console.log("🔥 ERROR:", err);
+
+    setStudent(null);
+
+    setResult({
+      valid: false,
+      error: "Lỗi xử lý dữ liệu",
+    });
+
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter") handleVerify();
@@ -52,6 +91,7 @@ export default function IndexPage() {
   const handleClear = () => {
     setInputHash("");
     setResult(null);
+    setStudent(null);
   };
 
   return (
@@ -74,7 +114,6 @@ export default function IndexPage() {
         <label style={styles.searchLabel}>Nhập mã băm (Hash) chứng chỉ</label>
         <div style={styles.searchRow}>
           <input
-            value={inputHash}
             onChange={(e) => setInputHash(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="0x... hoặc Qm... (IPFS hash)"
@@ -114,19 +153,25 @@ export default function IndexPage() {
 
       {/* Result */}
       {result && !loading && (
-        <>
-          {result.error ? (
-            <StatusBanner valid={false} message={result.error} />
-          ) : result.valid ? (
-            <>
-              <StatusBanner valid={true} message="Chứng chỉ hợp lệ và được xác thực trên Blockchain." />
-              <CertCard data={result} />
-            </>
-          ) : (
-            <StatusBanner valid={false} message={result.reason || "Chứng chỉ không hợp lệ."} />
-          )}
-        </>
-      )}
+  <>
+    {result.valid === true && (
+      <>
+        <StatusBanner
+          valid={true}
+          message="Chứng chỉ hợp lệ và được xác thực trên Blockchain."
+        />
+        <CertCard data={result} />
+      </>
+    )}
+
+    {result.valid === false && (
+      <StatusBanner
+        valid={false}
+        message={result.error || "Không tìm thấy chứng chỉ"}
+      />
+    )}
+  </>
+)}
 
       {/* Empty state */}
       {!result && !loading && (
